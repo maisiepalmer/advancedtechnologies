@@ -18,57 +18,94 @@ void SynthAudioSource::prepareToPlay (int /*samplesPerBlockExpected*/, double sa
 
 void SynthAudioSource::getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill)
 {
-    // Always clear first — never leave garbage in the buffer
     bufferToFill.clearActiveBufferRegion();
 
-    if (! isPlaying)
+    if (! isPlaying.load())
         return;
 
     // -------------------------------------------------------------------------
-    // CONCEPT: getRawParameterValue() is lock-free and safe on the audio thread.
-    // It returns a std::atomic<float>* — we load() it once per block.
+    // CONCEPT: We combine two frequency sources:
+    //   1. midiFrequency  -- set atomically by the MIDI thread on note-on
+    //   2. "detune" param -- the Frequency slider now offsets by +/- 24 semitones
+    //
+    // Semitone offset -> frequency multiplier: 2^(semitones/12)
+    // This shows students how parameters and live MIDI can work together.
     // -------------------------------------------------------------------------
-    const float frequency = apvts.getRawParameterValue ("frequency")->load();
-    const float volume    = apvts.getRawParameterValue ("volume")->load();
+    const float baseMidiHz  = midiFrequency.load();
+    const float detuneSemi  = apvts.getRawParameterValue ("frequency")->load(); // -24 .. +24
+    const float finalHz     = baseMidiHz * std::pow (2.0f, detuneSemi / 12.0f);
+    const float volume      = apvts.getRawParameterValue ("volume")->load();
 
-    // Phase increment per sample: Δφ = 2π * f / fs
     const double phaseIncrement = juce::MathConstants<double>::twoPi
-                                  * frequency / currentSampleRate;
+                                  * finalHz / currentSampleRate;
 
-    const int numSamples = bufferToFill.numSamples;
+    const int numSamples  = bufferToFill.numSamples;
     const int startSample = bufferToFill.startSample;
 
-    // Write to every output channel (typically L and R)
     for (int channel = 0; channel < bufferToFill.buffer->getNumChannels(); ++channel)
     {
         float* channelData = bufferToFill.buffer->getWritePointer (channel, startSample);
-        double phase = currentPhase; // local copy so both channels stay in phase
+        double phase = currentPhase;
 
         for (int sample = 0; sample < numSamples; ++sample)
         {
-            // Pure sine wave: y(t) = A * sin(φ)
             channelData[sample] = volume * (float) std::sin (phase);
-
             phase += phaseIncrement;
             if (phase >= juce::MathConstants<double>::twoPi)
-                phase -= juce::MathConstants<double>::twoPi; // wrap to avoid float drift
+                phase -= juce::MathConstants<double>::twoPi;
         }
     }
 
-    // Advance the shared phase accumulator by the full block
     currentPhase += phaseIncrement * numSamples;
     if (currentPhase >= juce::MathConstants<double>::twoPi)
         currentPhase -= juce::MathConstants<double>::twoPi;
 }
 
-void SynthAudioSource::releaseResources()
+void SynthAudioSource::releaseResources() {}
+
+//------------------------------------------------------------------------------
+// MidiInputCallback -- runs on the MIDI background thread
+//------------------------------------------------------------------------------
+void SynthAudioSource::handleIncomingMidiMessage (juce::MidiInput* /*source*/,
+                                                   const juce::MidiMessage& message)
 {
-    // Nothing to release for a pure oscillator
+    // -------------------------------------------------------------------------
+    // CONCEPT: isNoteOn() returns true for status byte 0x9n with velocity > 0.
+    // isNoteOff() catches both 0x8n messages AND 0x9n with velocity == 0
+    // (the latter is how many keyboards send note-off).
+    // -------------------------------------------------------------------------
+    if (message.isNoteOn())
+    {
+        const int note = message.getNoteNumber();
+        midiFrequency.store (midiNoteToHz (note));  // atomic write -- audio thread safe
+        currentNote.store (note);
+        isPlaying.store (true);
+
+        // Post a UI update to show the note name on the message thread
+        juce::MessageManager::callAsync ([this, note]
+        {
+            if (onNoteChanged) onNoteChanged (note);
+        });
+    }
+    else if (message.isNoteOff())
+    {
+        // Only stop if this is the note we're currently holding
+        if (message.getNoteNumber() == currentNote.load())
+        {
+            isPlaying.store (false);
+            currentNote.store (-1);
+
+            juce::MessageManager::callAsync ([this]
+            {
+                if (onNoteChanged) onNoteChanged (-1);
+            });
+        }
+    }
 }
 
 void SynthAudioSource::setPlaying (bool shouldPlay)
 {
-    // This is called from the UI thread. isPlaying is read on the audio thread,
-    // but a single bool write is atomic on all platforms JUCE targets.
-    isPlaying = shouldPlay;
+    isPlaying.store (shouldPlay);
+    if (! shouldPlay)
+        currentNote.store (-1);
 }

@@ -9,20 +9,17 @@
 //==============================================================================
 juce::AudioProcessorValueTreeState::ParameterLayout SynthComponent::createParameterLayout()
 {
-    // -------------------------------------------------------------------------
-    // CONCEPT: Each parameter has:
-    //   - A string ID used to retrieve it from anywhere (getRawParameterValue)
-    //   - A human-readable name shown in DAW automation lanes
-    //   - A NormalisableRange defining min, max, and step size
-    //   - A default value
-    // -------------------------------------------------------------------------
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
+    // -------------------------------------------------------------------------
+    // "frequency" is now a semitone detune offset (-24 .. +24).
+    // The base pitch comes from MIDI. Default 0 = no detune.
+    // -------------------------------------------------------------------------
     layout.add (std::make_unique<juce::AudioParameterFloat> (
-        "frequency",          // parameterID
-        "Frequency",          // parameter name
-        juce::NormalisableRange<float> (20.0f, 2000.0f, 1.0f, 0.4f), // skewed so low freqs aren't cramped
-        220.0f));             // default: A3
+        "frequency",
+        "Detune (semitones)",
+        juce::NormalisableRange<float> (-24.0f, 24.0f, 0.01f),
+        0.0f));
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         "volume",
@@ -46,59 +43,54 @@ SynthComponent::SynthComponent (juce::AudioDeviceManager& dm)
       deviceManager (dm)
 {
     // -------------------------------------------------------------------------
-    // CONCEPT: AudioSourcePlayer wraps an AudioSource for the device manager.
-    // We use the device manager directly here for simplicity.
+    // CONCEPT: onNoteChanged is a std::function set here on the UI thread.
+    // It is called via MessageManager::callAsync so it always runs on the
+    // message thread -- safe to update UI from here.
     // -------------------------------------------------------------------------
-
-    // Set up the three sliders
-    setupSlider (frequencySlider, frequencyLabel, "Frequency (Hz)");
-    setupSlider (volumeSlider,    volumeLabel,    "Volume");
-    setupSlider (attackSlider,    attackLabel,    "Attack (ms)");
-
-    // -------------------------------------------------------------------------
-    // CONCEPT: SliderAttachment connects a Slider to a named APVTS parameter.
-    // Moving the slider updates the ValueTree; the audio thread reads via
-    // getRawParameterValue() — no manual listener needed.
-    // -------------------------------------------------------------------------
-    frequencyAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>
-                          (apvts, "frequency", frequencySlider);
-    volumeAttachment    = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>
-                          (apvts, "volume", volumeSlider);
-    attackAttachment    = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>
-                          (apvts, "attack", attackSlider);
-
-    // Play/Stop button
-    playButton.onClick = [this]
+    audioSource.onNoteChanged = [this] (int note)
     {
-        isPlaying = ! isPlaying;
-        audioSource.setPlaying (isPlaying);
-
-        if (isPlaying)
+        if (note < 0)
         {
-            playButton.setButtonText ("Stop");
+            midiNoteLabel.setText ("--", juce::dontSendNotification);
+            midiNoteLabel.setColour (juce::Label::textColourId, juce::Colours::grey);
         }
         else
         {
-            playButton.setButtonText ("Play");
+            const juce::String noteName = juce::MidiMessage::getMidiNoteName (note, true, true, 4);
+            midiNoteLabel.setText (noteName + "  (MIDI " + juce::String (note) + ")",
+                                   juce::dontSendNotification);
+            midiNoteLabel.setColour (juce::Label::textColourId, juce::Colours::lightgreen);
         }
     };
 
-    addAndMakeVisible (playButton);
+    // Set up sliders
+    setupSlider (detuneSlider, detuneLabel, "Detune (semitones)");
+    setupSlider (volumeSlider, volumeLabel, "Volume");
+    setupSlider (attackSlider, attackLabel, "Attack (ms)");
+
+    detuneAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>
+                       (apvts, "frequency", detuneSlider);
+    volumeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>
+                       (apvts, "volume", volumeSlider);
+    attackAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>
+                       (apvts, "attack", attackSlider);
 
     // -------------------------------------------------------------------------
-    // Wire the AudioSource into the device manager via AudioSourcePlayer.
-    // AudioSourcePlayer implements AudioIODeviceCallback and delegates to our
-    // AudioSource.
+    // Register audioSource as a MIDI callback -- it now receives note events
+    // directly from the device manager on the MIDI background thread.
     // -------------------------------------------------------------------------
+    deviceManager.addMidiInputDeviceCallback ({}, &audioSource);
+
+    // Hook audio into device
     audioSourcePlayer.setSource (&audioSource);
     deviceManager.addAudioCallback (&audioSourcePlayer);
 
-    setSize (700, 400);
+    setSize (700, 420);
 }
 
 SynthComponent::~SynthComponent()
 {
-    // Always remove the callback before the audio source is destroyed
+    deviceManager.removeMidiInputDeviceCallback ({}, &audioSource);
     deviceManager.removeAudioCallback (&audioSourcePlayer);
     audioSourcePlayer.setSource (nullptr);
 }
@@ -112,55 +104,37 @@ void SynthComponent::setupSlider (juce::Slider& slider, juce::Label& label,
 
     label.setText (labelText, juce::dontSendNotification);
     label.setJustificationType (juce::Justification::centred);
-    label.setFont (juce::Font (14.0f));
+    label.setFont (juce::Font (13.0f));
     addAndMakeVisible (label);
 }
 
 void SynthComponent::paint (juce::Graphics& g)
 {
     g.fillAll (juce::Colour (0xff1e1e2e));
-    g.setColour (juce::Colours::white.withAlpha (0.05f));
-    g.fillRoundedRectangle (getLocalBounds().reduced (12).toFloat(), 12.0f);
-
-    g.setColour (juce::Colours::lightblue);
-    g.setFont (22.0f);
-    g.drawText ("Simple Sine Synthesiser", getLocalBounds().removeFromTop (50),
-                juce::Justification::centred);
-
-    g.setColour (juce::Colours::grey);
-    g.setFont (12.0f);
-    g.drawText ("Sliders are backed by AudioProcessorValueTreeState",
-                getLocalBounds().removeFromBottom (30),
-                juce::Justification::centred);
 }
 
 void SynthComponent::resized()
 {
     auto area = getLocalBounds().reduced (20);
-    area.removeFromTop (50);  // title
 
-    // Play button at top-right
-    playButton.setBounds (area.removeFromTop (40).removeFromRight (120));
-    area.removeFromTop (10);
+    // MIDI note display
+    midiNoteLabel.setBounds (area.removeFromTop (36));
+    area.removeFromTop (16);
 
-    // Three knobs side by side
-    const int knobW = area.getWidth() / 3;
+    // Three knobs
+    const int knobW  = area.getWidth() / 3;
     const int labelH = 24;
-    const int knobH  = area.getHeight() - labelH - 20;
 
-    auto knobArea = area;
+    auto detuneB = area.removeFromLeft (knobW);
+    detuneLabel.setBounds (detuneB.removeFromBottom (labelH));
+    detuneSlider.setBounds (detuneB);
 
-    auto freqBounds = knobArea.removeFromLeft (knobW);
-    frequencyLabel.setBounds (freqBounds.removeFromBottom (labelH));
-    frequencySlider.setBounds (freqBounds);
+    auto volB = area.removeFromLeft (knobW);
+    volumeLabel.setBounds (volB.removeFromBottom (labelH));
+    volumeSlider.setBounds (volB);
 
-    auto volBounds = knobArea.removeFromLeft (knobW);
-    volumeLabel.setBounds (volBounds.removeFromBottom (labelH));
-    volumeSlider.setBounds (volBounds);
-
-    auto atkBounds = knobArea;
-    attackLabel.setBounds (atkBounds.removeFromBottom (labelH));
-    attackSlider.setBounds (atkBounds);
+    attackLabel.setBounds (area.removeFromBottom (labelH));
+    attackSlider.setBounds (area);
 }
 
 

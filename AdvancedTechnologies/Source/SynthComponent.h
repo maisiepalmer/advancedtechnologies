@@ -26,7 +26,6 @@ public:
 private:
     //--------------------------------------------------------------------------
     // APVTS needs a "dummy" AudioProcessor to satisfy its constructor.
-    // For standalone teaching code we create a minimal one inline.
     //--------------------------------------------------------------------------
     struct DummyProcessor : public juce::AudioProcessor
     {
@@ -51,7 +50,7 @@ private:
     };
 
     // -------------------------------------------------------------------------
-    // CONCEPT: createParameterLayout() defines every parameter with its range,
+    // createParameterLayout() defines every parameter with its range,
     // default, and identifier string. This layout is stored in the ValueTree.
     // -------------------------------------------------------------------------
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
@@ -72,23 +71,22 @@ private:
     //--------------------------------------------------------------------------
     // UI Controls
     //--------------------------------------------------------------------------
-    juce::Slider frequencySlider;
+    juce::Slider detuneSlider;   // was frequencySlider -- now semitone offset +/-24
     juce::Slider volumeSlider;
-    juce::Slider attackSlider;   // attack shapes the envelope (educational — not wired to DSP in this skeleton)
+    juce::Slider attackSlider;
 
-    juce::Label  frequencyLabel;
+    juce::Label  detuneLabel;
     juce::Label  volumeLabel;
     juce::Label  attackLabel;
 
-    // ToggleButton acts as a play/stop gate
-    juce::TextButton playButton { "Play" };
-    bool isPlaying = false;
+    // Shows the currently held MIDI note
+    juce::Label  midiNoteLabel;
 
     // -------------------------------------------------------------------------
     // CONCEPT: SliderAttachment keeps the Slider and the APVTS parameter in
     // sync bidirectionally with no extra listener code.
     // -------------------------------------------------------------------------
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> frequencyAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> detuneAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> volumeAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attackAttachment;
 

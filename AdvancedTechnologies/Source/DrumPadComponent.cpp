@@ -137,24 +137,13 @@ void DrumPadComponent::paint (juce::Graphics& g)
 {
     g.fillAll (juce::Colour (0xff1e1e2e));
 
-    g.setColour (juce::Colours::lightblue);
-    g.setFont (22.0f);
-    g.drawText ("Drum Pad",
-                getLocalBounds().removeFromTop (44),
-                juce::Justification::centred);
-
-    g.setColour (juce::Colours::grey);
-    g.setFont (11.0f);
-    g.drawText ("MIDI notes C2 (36) D#3 (51)  place pad_0.wav pad_15.wav in Samples/",
-                getLocalBounds().removeFromBottom (22),
-                juce::Justification::centred);
+ 
+    // "MIDI notes C2 (36) D#3 (51)  place pad_0.wav pad_15.wav in Samples/"
 }
 
 void DrumPadComponent::resized()
 {
     auto area = getLocalBounds().reduced (12);
-    area.removeFromTop  (44);  // title
-    area.removeFromBottom (22); // note
 
     const int cols   = 4;
     const int rows   = 4;
