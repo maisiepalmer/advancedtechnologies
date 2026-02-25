@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<JUCERPROJECT id="jZr6YD" name="AdvancedTechnologies" projectType="guiapp"
+              useAppConfig="0" addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
+  <MAINGROUP id="qW5rDC" name="AdvancedTechnologies">
+    <GROUP id="{6DED7A10-B213-6AE4-E2AC-92AFC0A69C92}" name="Source">
+      <FILE id="BYF6Ph" name="DrumPadComponent.cpp" compile="1" resource="0"
+            file="Source/DrumPadComponent.cpp"/>
+      <FILE id="OJip7T" name="DrumPadComponent.h" compile="0" resource="0"
+            file="Source/DrumPadComponent.h"/>
+      <FILE id="lgOLRt" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
+      <FILE id="fASyM6" name="MainComponent.cpp" compile="1" resource="0"
+            file="Source/MainComponent.cpp"/>
+      <FILE id="ImRp36" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
+      <FILE id="dyR4Rv" name="SamplePlayer.cpp" compile="1" resource="0"
+            file="Source/SamplePlayer.cpp"/>
+      <FILE id="WPgpEI" name="SamplePlayer.h" compile="0" resource="0" file="Source/SamplePlayer.h"/>
+      <FILE id="afH2Ou" name="SynthAudioSource.cpp" compile="1" resource="0"
+            file="Source/SynthAudioSource.cpp"/>
+      <FILE id="OIBuVE" name="SynthAudioSource.h" compile="0" resource="0"
+            file="Source/SynthAudioSource.h"/>
+      <FILE id="AV1fmB" name="SynthComponent.cpp" compile="1" resource="0"
+            file="Source/SynthComponent.cpp"/>
+      <FILE id="EyY3Cq" name="SynthComponent.h" compile="0" resource="0"
+            file="Source/SynthComponent.h"/>
+    </GROUP>
+  </MAINGROUP>
+  <MODULES>
+    <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_devices" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_formats" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_processors" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_utils" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_core" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_dsp" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_events" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_midi_ci" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+  </MODULES>
+  <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1"/>
+  <EXPORTFORMATS>
+    <XCODE_MAC targetFolder="Builds/MacOSX">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="NewProject"/>
+        <CONFIGURATION isDebug="0" name="Release" targetName="NewProject"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_audio_basics" path="../../../UWE/CC3/SonicTouch/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_devices" path="../../../UWE/CC3/SonicTouch/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_formats" path="../../../UWE/CC3/SonicTouch/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_processors" path="../../../UWE/CC3/SonicTouch/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_utils" path="../../../UWE/CC3/SonicTouch/JUCE/modules"/>
+        <MODULEPATH id="juce_core" path="../../../UWE/CC3/SonicTouch/JUCE/modules"/>
+        <MODULEPATH id="juce_data_structures" path="../../../UWE/CC3/SonicTouch/JUCE/modules"/>
+        <MODULEPATH id="juce_dsp" path="../../../UWE/CC3/SonicTouch/JUCE/modules"/>
+        <MODULEPATH id="juce_events" path="../../../UWE/CC3/SonicTouch/JUCE/modules"/>
+        <MODULEPATH id="juce_graphics" path="../../../UWE/CC3/SonicTouch/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="../../../UWE/CC3/SonicTouch/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_extra" path="../../../UWE/CC3/SonicTouch/JUCE/modules"/>
+        <MODULEPATH id="juce_midi_ci" path="../../../UWE/CC3/SonicTouch/JUCE/modules"/>
+      </MODULEPATHS>
+    </XCODE_MAC>
+  </EXPORTFORMATS>
+</JUCERPROJECT>
