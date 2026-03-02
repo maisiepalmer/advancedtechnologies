@@ -23,14 +23,6 @@ void SynthAudioSource::getNextAudioBlock (const juce::AudioSourceChannelInfo& bu
     if (! isPlaying.load())
         return;
 
-    // -------------------------------------------------------------------------
-    // CONCEPT: We combine two frequency sources:
-    //   1. midiFrequency  -- set atomically by the MIDI thread on note-on
-    //   2. "detune" param -- the Frequency slider now offsets by +/- 24 semitones
-    //
-    // Semitone offset -> frequency multiplier: 2^(semitones/12)
-    // This shows students how parameters and live MIDI can work together.
-    // -------------------------------------------------------------------------
     const float baseMidiHz  = midiFrequency.load();
     const float detuneSemi  = apvts.getRawParameterValue ("frequency")->load(); // -24 .. +24
     const float finalHz     = baseMidiHz * std::pow (2.0f, detuneSemi / 12.0f);
@@ -69,11 +61,6 @@ void SynthAudioSource::releaseResources() {}
 void SynthAudioSource::handleIncomingMidiMessage (juce::MidiInput* /*source*/,
                                                    const juce::MidiMessage& message)
 {
-    // -------------------------------------------------------------------------
-    // CONCEPT: isNoteOn() returns true for status byte 0x9n with velocity > 0.
-    // isNoteOff() catches both 0x8n messages AND 0x9n with velocity == 0
-    // (the latter is how many keyboards send note-off).
-    // -------------------------------------------------------------------------
     if (message.isNoteOn())
     {
         const int note = message.getNoteNumber();

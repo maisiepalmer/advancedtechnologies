@@ -11,10 +11,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout SynthComponent::createParame
 {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
-    // -------------------------------------------------------------------------
-    // "frequency" is now a semitone detune offset (-24 .. +24).
-    // The base pitch comes from MIDI. Default 0 = no detune.
-    // -------------------------------------------------------------------------
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         "frequency",
         "Detune (semitones)",
@@ -42,11 +38,6 @@ SynthComponent::SynthComponent (juce::AudioDeviceManager& dm)
       audioSource (apvts),
       deviceManager (dm)
 {
-    // -------------------------------------------------------------------------
-    // CONCEPT: onNoteChanged is a std::function set here on the UI thread.
-    // It is called via MessageManager::callAsync so it always runs on the
-    // message thread -- safe to update UI from here.
-    // -------------------------------------------------------------------------
     audioSource.onNoteChanged = [this] (int note)
     {
         if (note < 0)
@@ -75,10 +66,7 @@ SynthComponent::SynthComponent (juce::AudioDeviceManager& dm)
     attackAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>
                        (apvts, "attack", attackSlider);
 
-    // -------------------------------------------------------------------------
-    // Register audioSource as a MIDI callback -- it now receives note events
-    // directly from the device manager on the MIDI background thread.
-    // -------------------------------------------------------------------------
+    
     deviceManager.addMidiInputDeviceCallback ({}, &audioSource);
 
     // Hook audio into device

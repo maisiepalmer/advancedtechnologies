@@ -5,10 +5,6 @@
     AudioProcessorValueTreeState AND responds to MIDI note-on / note-off
     messages.
 
-    CONCEPT: By implementing MidiInputCallback we receive MIDI events on a
-             background thread. We must communicate with the audio thread
-             safely -- here we use std::atomic<> members rather than locks,
-             which is the lightest-weight approach for simple values.
 
     MIDI behaviour:
       - Note-on  : sets the oscillator frequency from the MIDI note number
@@ -25,7 +21,8 @@
 #include <JuceHeader.h>
 
 class SynthAudioSource : public juce::AudioSource,
-                         public juce::MidiInputCallback   // <-- MIDI thread callback
+public juce::MidiInputCallback,
+public juce::AudioProcessorParameter::Listener
 {
 public:
     explicit SynthAudioSource (juce::AudioProcessorValueTreeState& apvts);
@@ -35,10 +32,6 @@ public:
     void getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill) override;
     void releaseResources() override;
 
-    // -------------------------------------------------------------------------
-    // MidiInputCallback interface -- called on the MIDI background thread.
-    // We update atomics so the audio thread picks up the change lock-free.
-    // -------------------------------------------------------------------------
     void handleIncomingMidiMessage (juce::MidiInput* source,
                                     const juce::MidiMessage& message) override;
 
@@ -58,10 +51,6 @@ private:
     double currentSampleRate = 44100.0;
     double currentPhase      = 0.0;
 
-    // -------------------------------------------------------------------------
-    // CONCEPT: std::atomic<> lets the MIDI thread write and the audio thread
-    // read without a mutex. Only use this for simple scalar values.
-    // -------------------------------------------------------------------------
     std::atomic<float> midiFrequency { 440.0f }; // set by MIDI note-on
     std::atomic<bool>  isPlaying     { false };
     std::atomic<int>   currentNote   { -1 };      // -1 = no note held
